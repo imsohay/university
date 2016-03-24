@@ -1,0 +1,25 @@
+new formula
+literal 0 1 3 1 2 4 
+literal 0 1 3 1 5 4 
+literal 0 1 3 1 3 2 
+literal 0 1 3 1 3 5 
+literal 0 1 3 1 3 4 
+literal 0 1 3 2 1 3 
+literal 0 1 3 2 3 5 
+literal 0 2 3 2 1 5 
+literal 0 1 3 3 2 1 
+literal 0 1 3 3 6 2 
+literal 0 1 3 3 6 1 
+end
+
+new formula
+literal 0 1 3 3 1 4 
+literal 0 1 3 1 2 3 
+literal 0 1 3 1 5 3 
+literal 0 1 3 1 6 2 
+literal 0 1 3 1 6 5 
+literal 0 1 3 1 6 3 
+literal 0 2 3 2 1 5 
+end
+
+end data
