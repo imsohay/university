@@ -17,6 +17,7 @@ typedef bool (*pred_symb)(int*);
 typedef std::vector<unsigned int> vui;
 typedef std::vector<vui > vvui;
 typedef std::vector<int> vi;
+typedef unsigned long long ull;
 
 
 enum type_term { CONST, VAR, FUNC, NOT_DEF };
@@ -34,12 +35,14 @@ public:
     Term(type_term _type, ui _id, ui _amount_sub_terms, Term* _sub_terms)
         :type(_type), id(_id), amount_sub_terms(_amount_sub_terms), sub_terms(_sub_terms) {}
     ~Term();
+    Term(const Term& other) { *this = other; }
 
 
     type_term get_type() const { return type; }
     ui get_id() const { return id; }
 
     friend std::ostream& operator<<(std::ostream& os, Term& term);
+    Term &operator=(const Term &other);
 
 private:
     type_term type;

@@ -12,7 +12,9 @@ public:
     friend class Interpretation;
     friend class Formula_wrapper;
 
+    Formula(const Formula& other) { *this = other; }
     friend std::ostream& operator<<(std::ostream& os, Formula& formula);
+    Formula & operator=(const Formula &other);
 
 private:
     label _label;
@@ -27,6 +29,8 @@ private:
     Formula(label __label, Formula* _l, Formula* _r, Atomic_formula* _m)
         :_label(__label), l(_l), r(_r), m(_m) {}
     ~Formula();
+
+    bool empty() const;
 
 
 };

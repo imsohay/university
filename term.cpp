@@ -2,9 +2,32 @@
 
 
 
+
 Term::~Term()
 {
     check_and_clear_array(sub_terms);
+}
+
+Term &Term::operator=(const Term &other)
+{
+    if (this != &other)
+    {
+        type = other.type;
+        id = other.id;
+        amount_sub_terms = other.amount_sub_terms;
+        if (other.sub_terms != NULL)
+        {
+            sub_terms = new Term[amount_sub_terms];
+            forn(i, amount_sub_terms)
+                sub_terms[i] = other.sub_terms[i];
+        }
+        else
+        {
+            sub_terms = NULL;
+        }
+    }
+
+    return *this;
 }
 
 

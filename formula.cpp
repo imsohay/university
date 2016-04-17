@@ -34,11 +34,52 @@ std::ostream &operator<<(std::ostream &os, Formula &formula)
 }
 
 
+
+Formula &Formula::operator=(const Formula &other)
+{
+    if (this != &other)
+    {
+        if (other.l != NULL)
+        {
+            l = new Formula;
+            *l = *other.l;
+        }
+        else
+            l = NULL;
+
+        if (other.r != NULL)
+        {
+            r = new Formula;
+            *r = *other.r;
+        }
+        else
+            r = NULL;
+
+        if (other.m != NULL)
+        {
+            m = new Atomic_formula;
+            *m = *other.m;
+        }
+        else
+            m = NULL;
+
+        _label = other._label;
+        id = other.id;
+
+    }
+    return *this;
+}
+
 Formula::~Formula()
 {
     check_and_clear(m);
     check_and_clear(l);
     check_and_clear(r);
+}
+
+bool Formula::empty() const
+{
+    return (m == NULL && r == NULL && l == NULL && _label == NONE);
 }
 
 

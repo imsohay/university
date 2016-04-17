@@ -8,6 +8,9 @@
 using namespace std;
 
 
+#define debug(x) {cout << "debug search:\t"; x; }
+
+
 int find_at(vi v, int el)
 {
     forn(i, v.size())
@@ -15,23 +18,56 @@ int find_at(vi v, int el)
     return -1;
 }
 
-int find_at(vcl v, const Literal* el)
+
+void reverse_map(map<int,int>& s)
 {
-    forn(i, v.size())
-        if (*(v[i]) == *el) return i;
-    return -1;
+    map<int,int> temp;
+    for(auto el : s)
+        temp[el.second] = el.first;
+    s.clear();
+    s = temp;
 }
 
 
-int find_at(vector<Literal> v, Literal el)
+int reverse_find(const map<int,int>& s, int value)
 {
-    forn(i, v.size())
-        if (v[i] == el) return i;
-    return -1;
+    for(const auto & el : s)
+    {
+        if (el.second == value)
+            return el.first;
+    }
+
+    __throw_out_of_range("not found key by value");
 }
 
 
-int CalculatorFormula::have(const vcl& v, const Literal* x)
+template <typename T>
+void Calculator_formula::do_substitude(vcl literals, T s)
+{
+    for(auto& el : literals)
+    {
+        forn(i, el->amount_vars)
+        {
+            el->vars[i] = s.at(el->vars[i]);
+        }
+    }
+}
+
+
+void Calculator_formula::do_reverse_substitude(vcl literals, const std::map<int,int> &s)
+{
+    for(auto& el : literals)
+    {
+        forn(i, el->amount_vars)
+        {
+            el->vars[i] = reverse_find(s, el->vars[i]);
+        }
+    }
+}
+
+
+
+int Calculator_formula::have(const vcl& v, const Literal* x)
 {
     int i = 0;
     for(auto& el : v)
@@ -44,7 +80,7 @@ int CalculatorFormula::have(const vcl& v, const Literal* x)
 }
 
 
-int CalculatorFormula::have(const vui& v, ui x)
+int Calculator_formula::have(const vui& v, ui x)
 {
     int i = 0;
     for(auto& el : v)
@@ -56,7 +92,7 @@ int CalculatorFormula::have(const vui& v, ui x)
 }
 
 
-void CalculatorFormula::cut_off_literals(std::vector<const Literal *> &v1, const std::vector<const Literal *> &v2)
+void Calculator_formula::cut_off_literals(std::vector<const Literal *> &v1, const std::vector<const Literal *> &v2)
 {
     forn(i, v1.size())
     {
@@ -70,7 +106,7 @@ void CalculatorFormula::cut_off_literals(std::vector<const Literal *> &v1, const
 }
 
 
-ui CalculatorFormula::calc_amount_vars(const vcl& v, std::map<int, int>& subst)
+ui Calculator_formula::calc_amount_vars(const vcl& v, std::map<int, int>& subst)
 {
     vui vars;
     ui current;
@@ -101,148 +137,84 @@ ui CalculatorFormula::calc_amount_vars(const vcl& v, std::map<int, int>& subst)
 }
 
 
-inline void show(vector<const Literal* > v)
+void debug_show(map<int,int> s)
 {
-    for (const Literal* x : v)
-    {
-        Literal l = *x;
-        cout << l;
-    }
-}
-
-inline void show(vector<Literal> v)
-{
-    for (auto x : v)
-    {
-        x.show();
-    }
+    for (auto el : s)
+        printf("%3i ", el.first);
+    cout << endl;
+    for (auto el : s)
+        printf("%3i ", el.second);
+    cout << endl;
 }
 
 
-inline void show_with_subst(const vector<const Literal*> v, const vi subst)
+void debug_show(vi v)
 {
-    int n;
+    string s;
+    forn(i, v.size())
+        printf("%3i", i);
+    cout << endl;
     for(auto x : v)
-    {
-        cout << x->predicat_id << "  ";
-        forn(i, x->amount_vars)
-        {
-            n = subst[x->vars[i]];
-            cout << n << " ";
-        }
-
-        cout << endl;
-    }
+        printf("%3i", x);
+    cout << endl;
 }
 
 
-inline void substitude_vector(vector<Literal> &v, vi subst)
+void debug_show(vcl v)
 {
-    forn(j, v.size())
+    for(const Literal* el : v)
     {
-        forn(i, v[j].amount_vars)
-        {
-            v[j].vars[i] = subst[v[j].vars[i]];
-        }
-
+       cout << "\t";
+        forn(i, el->amount_vars)
+            cout << el->vars[i] << " ";
+       cout << endl;
     }
 }
 
-inline void substitude_literal(vector<const Literal*>& v, vi subst)
+
+void Calculator_formula::transform_substitution(const Formula_wrapper& wrap_1,
+                                                const Formula_wrapper& wrap_2,
+                                                std::map<int,int> subst_1,
+                                                std::map<int,int> subst_2,
+                                                Variable_substitution* subst)
 {
-    for(auto& x : v)
+    assert((*(subst->getFrom()) == wrap_1) && (*(subst->getTo()) == wrap_2) ||
+           (*(subst->getTo()) == wrap_1) && (*(subst->getFrom()) == wrap_2));
+    if (subst->getFrom() == &wrap_2)
     {
-        forn(i, x->amount_vars)
-        {
-            x->vars[i] = subst[x->vars[i]];
-        }
+        std::swap(subst_1, subst_2);
     }
+
+
+    map<int,int> transformed_subst;
+    for(const auto& el : subst->getValue())
+    {
+        transformed_subst.insert(std::pair<int,int>(subst_2.at(el.first),
+                                                    (el.second == -1 ? -1 : subst_1.at(el.second))));
+    }
+
+//    cout << "first subst:\n";
+//    debug_show(subst_1);
+//    cout << "second subst:\n";
+//    debug_show(subst_2);
+
+//    cout << "transformed:\n";
+//    debug_show(transformed_subst);
+    subst->clear();
+    for(auto el : transformed_subst)
+        subst->insert(el.first, el.second);
 }
 
-
-void show_literals_with_common(vcl major,
-                               vcl common,
-                               set<ui> vars,
-                               vi subst_major,
-                               vi subst_common,
-                               string name_formula,
-                               string name_var,
-                               map<int,int> begin_subst,
-                               ofstream& fout)
-{
-	
-    fout << name_formula << " =";
-    for(auto el : major)
-    {
-        bool have_literal = 0;
-        for(auto common_el : common)
-        {
-            if (el->predicat_id == common_el->predicat_id && el->sign == common_el->sign)
-            {
-                bool vars_not_equal = 0;
-                forn(i, el->amount_vars)
-                {
-                    if (subst_major[el->vars[i]] != subst_common[common_el->vars[i]])
-                    {
-                        vars_not_equal = 1;
-//                        cout << endl;
-//                        forn(j, el->amount_vars) cout << subst_major[el->vars[j]] << " ";
-//                        cout << "   [" << i << "]\n";
-//                        forn(j, common_el->amount_vars) cout << subst_common[common_el->vars[j]] << " ";
-//                        cout << endl;
-                        break;
-                    }
-                }
-                if (!vars_not_equal)
-                {
-                    have_literal = 1;
-                    break;
-                }
-            }
-        }
-
-        if (!have_literal)
-        {
-            fout << " p" << el->predicat_id << "(";
-            forn(i, el->amount_vars)
-            {
-                int x = subst_major[el->vars[i]];
-                if (vars.find(x) != vars.end())
-                {
-                    fout << "u" << x;
-                }
-                else
-                {
-                    int n = -2;
-                    for(auto p : begin_subst)
-                    {
-                        if (p.second == el->vars[i])
-                        {
-                            n = p.first;
-                            break;
-                        }
-                    }
-                    assert(n != -2);
-
-                    fout << name_var << n;
-                }
-                if (i + 1 != el->amount_vars) fout << " ";
-            }
-            fout << ") &";
-        }
-    }
-    fout << " C\n";
-}
 
 //    BOTH FORMULA MUST BE IN CNF
-Formula_wrapper* CalculatorFormula::max_common_subformula(const Formula_wrapper& wrap_1,
+Formula_wrapper* Calculator_formula::max_common_subformula(const Formula_wrapper& wrap_1,
                                                          const Formula_wrapper& wrap_2,
-                                                         ALGORITHM_VERS vers, vi& max_subst)
+                                                         ALGORITHM_VERS vers,
+                                                         Variable_substitution* subst)
 {
-    ui num_of_from_formula = 0;
+    bool swaped = false;
     vector<const Literal* >* p_v1 = wrap_1.get_literals();
     vector<const Literal* >* p_v2 = wrap_2.get_literals();
-
     vector<const Literal* > v1 = *p_v1;
     vector<const Literal* > v2 = *p_v2;
     check_and_clear(p_v1);
@@ -250,111 +222,57 @@ Formula_wrapper* CalculatorFormula::max_common_subformula(const Formula_wrapper&
 
     cut_off_literals(v1, v2);
     cut_off_literals(v2, v1);
-    map<int, int> subst_1, subst_2, subst;
+    map<int, int> subst_1, subst_2;
     ui amount_vars_1 = calc_amount_vars(v1, subst_1);
     ui amount_vars_2 = calc_amount_vars(v2, subst_2);
-
-//    cout << "before searching:\n";
-//    cout << "first:\n";
-//    show(v1);
-//    cout << "second:\n";
-//    show(v2);
-//    cout << "\n\n\n";
+    transform_substitution(wrap_1, wrap_2, subst_1, subst_2, subst);
+    //cerr << "transformed subst:\n";
+    //cerr << *subst << endl;
 
     vector<const Literal*> common_literals = max_common_subformula(v1, amount_vars_1, v2,
-                                                                   amount_vars_2, vers, max_subst, num_of_from_formula);
+                                                                   amount_vars_2, vers, subst, swaped);
 
-    clear_vcl(v1);
-    clear_vcl(v2);
-    auto res = new Formula_wrapper(common_literals);
-    clear_vcl(common_literals);
+//    cout << "common subst:\n";
+//    cout << *subst << endl;
+    if (vers == ALGORITHM_VERS::SECOND)
+    {
+        if (swaped)
+        {
+            std::swap(subst_1, subst_2);
+            subst->swap_formulas();
+        }
+
+        reverse_map(subst_1);
+        map<int,int> new_s;
+        int temp_val = -1;
+        for(auto el : subst_2)
+        {
+            temp_val = subst->at(el.second);
+            if (temp_val == -1)
+            {
+                new_s[el.first] = temp_val;
+            }
+            else
+            {
+                new_s[el.first] = subst_1.at(temp_val);
+            }
+        }
+
+        subst->clear();
+        for(auto el : new_s)
+            subst->insert(el.first, el.second);
+
+        clear_vcl(v1);
+        clear_vcl(v2);
+        do_reverse_substitude(common_literals, subst_2);
+    }
+        auto res = new Formula_wrapper(common_literals);
+        clear_vcl(common_literals);
+
+//    subst->flush();
     return res;
 }
 
-
-size_t just_calc_amount_vars(vcl * literals)
-{
-    set<ui> set;
-    for(auto l : *literals)
-    {
-        forn(i, l->amount_vars)
-        {
-            set.insert(l->vars[i]);
-        }
-    }
-
-    return set.size();
-}
-
-vector<vector<int>>* CalculatorFormula::analyse_variable_characteristic(const Formula_wrapper &fw)
-{
-    vcl *literals = fw.get_literals();
-
-    map<int,int> subst;
-    size_t amount_vars = calc_amount_vars(*literals, subst);
-    size_t dimension = literals->at(0)->amount_vars;
-    vector<vector<int>>* table = new vector<vector<int>>();
-    forn(i, amount_vars)
-    {
-        table->push_back(vector<int>(dimension, 0));
-    }
-
-    forn(i, literals->size())
-    {
-        const Literal* l = literals->at(i);
-        forn(j, dimension)
-        {
-            (*table)[l->vars[j]][j]++;
-        }
-    }
-
-//    forn(i, amount_vars)
-//    {
-//        forn(j, dimension)
-//        {
-//            cout << (*table)[i][j] << " ";
-//        }
-//        cout << "   ";
-//    }
-
-    clear_vcl(*literals);
-    check_and_clear(literals);
-    return table;
-}
-
-
-bool equal(vector<int> v1, vector<int> v2)
-{
-    if (v1.size() != v2.size()) return false;
-
-    forn(i, v1.size())
-    {
-        if (v1[i] != v2[i])
-            return false;
-    }
-
-    return true;
-}
-
-size_t CalculatorFormula::amount_mathing(vvi *t1, vvi *t2)
-{
-    size_t sum = 0;
-    set<size_t> matched;
-    forn(i, t1->size())
-    {
-        forn(j, t2->size())
-        {
-            if (equal(t1->at(i), t2->at(j)) && matched.count(j) == 0)
-            {
-                sum++;
-                matched.insert(j);
-                break;
-            }
-        }
-    }
-
-    return sum;
-}
 
 
 bool go_next(vui& v, ui limit)
@@ -374,7 +292,7 @@ bool go_next(vui& v, ui limit)
 }
 
 
-bool CalculatorFormula::have_literal(const std::vector<const Literal*>& vl, const Literal* l, vui& eval)
+bool Calculator_formula::have_literal(const std::vector<const Literal*>& vl, const Literal* l, vui& eval)
 {
     bool equal = true;
     for(const Literal* curr : vl)
@@ -401,7 +319,7 @@ bool CalculatorFormula::have_literal(const std::vector<const Literal*>& vl, cons
 }
 
 
-vui CalculatorFormula::partial_inference(const vector<const Literal*>& from, const ui amount_vars_from,
+vui Calculator_formula::partial_inference(const vector<const Literal*>& from, const ui amount_vars_from,
                                          const vector<const Literal*>& to, const  ui amount_vars_to)
 {
     ui begin_size = to.size();
@@ -446,7 +364,7 @@ vui CalculatorFormula::partial_inference(const vector<const Literal*>& from, con
 }
 
 
-bool CalculatorFormula::correct_on_subst(const Literal* possible_subst, const Literal* remain_lit, const vi& subst)
+bool Calculator_formula::correct_on_subst(const Literal* possible_subst, const Literal* remain_lit, const vi& subst)
 {
     if (!Literal::equal_literals(possible_subst, remain_lit)) return false;
     int x, x2, x3;
@@ -462,7 +380,7 @@ bool CalculatorFormula::correct_on_subst(const Literal* possible_subst, const Li
 }
 
 
-void CalculatorFormula::add_pos_subst_to_subst(vi& subst, const Literal* possible_subst, const Literal* remain_lit)
+void Calculator_formula::add_pos_subst_to_subst(vi& subst, const Literal* possible_subst, const Literal* remain_lit)
 {
     forn(i, remain_lit->amount_vars)
     {
@@ -471,7 +389,7 @@ void CalculatorFormula::add_pos_subst_to_subst(vi& subst, const Literal* possibl
 }
 
 
-void CalculatorFormula::throw_fail_lits(const vi &subst, const vcl &from, const vcl &to, vui &remain_lits, const vui& possible_subst)
+void Calculator_formula::throw_fail_lits(const vi &subst, const vcl &from, const vcl &to, vui &remain_lits, const vui& possible_subst)
 {
     vui copy_remain_lits;
     bool correct;
@@ -497,17 +415,17 @@ void CalculatorFormula::throw_fail_lits(const vi &subst, const vcl &from, const 
 }
 
 
-void CalculatorFormula::add_success_lits(const vi &subst, const vcl &from, const vcl &to, vui &remain_lits, vui &current_subform, vui possible_subst)
+void Calculator_formula::add_success_lits(const vi &subst, const vcl &from, const vcl &to, vui &remain_lits, vui &current_subform, vui possible_subst)
 {
-    vui copy_remain_lits;
 
+    vui copy_remain_lits;
     bool flag = false;
     forn(i, remain_lits.size())
     {
         flag = false;
         for (ui j : possible_subst)
         {
-            if (to[remain_lits[i]]->equal_on_eval(from[j], subst))
+            if (from[j]->equal_on_eval(to[remain_lits[i]], subst))
             {
                 current_subform.push_back(remain_lits[i]);
                 flag = true;
@@ -523,7 +441,7 @@ void CalculatorFormula::add_success_lits(const vi &subst, const vcl &from, const
 }
 
 
-void CalculatorFormula::throw_fail_substs(vi &subst, vui &possible_subst, vui &remain_lits, const vcl &from,  const vcl &to)
+void Calculator_formula::throw_fail_substs(vi &subst, vui &possible_subst, vui &remain_lits, const vcl &from,  const vcl &to)
 {
     vui copy_possible_subst;
 
@@ -550,18 +468,27 @@ void CalculatorFormula::throw_fail_substs(vi &subst, vui &possible_subst, vui &r
 }
 
 
-void CalculatorFormula::search(const vcl &from, const ui& amount_vars_from, const vcl &to, const ui& amount_vars_to,
-            vui& max_subform, vui& current_subform, vui& remain_lits, vui& possible_subst, vi& subst, vi& max_subst)
+
+void Calculator_formula::search(const vcl &from,
+                                const ui& amount_vars_from,
+                                const vcl &to,
+                                const ui& amount_vars_to,
+                                vui& max_subform,
+                                vui& current_subform,
+                                vui& remain_lits,
+                                vui& possible_subst,
+                                vi& cur_subst,
+                                Variable_substitution* max_subst)
 {
-    throw_fail_lits(subst, from, to, remain_lits, possible_subst);
-    add_success_lits(subst, from, to, remain_lits, current_subform, possible_subst);
-    throw_fail_substs(subst, possible_subst, remain_lits, from, to);
+    throw_fail_lits(cur_subst, from, to, remain_lits, possible_subst);
+    add_success_lits(cur_subst, from, to, remain_lits, current_subform, possible_subst);
+    throw_fail_substs(cur_subst, possible_subst, remain_lits, from, to);
     if (current_subform.size() > max_subform.size())
     {
         max_subform.clear();
-
-        max_subst.clear();
-        max_subst = vi(subst.begin(), subst.end());
+        max_subst->clear();
+        forn(i, cur_subst.size())
+            (*max_subst)[i] = cur_subst[i];
         for(auto x : current_subform) max_subform.push_back(x);
     }
 
@@ -580,12 +507,12 @@ void CalculatorFormula::search(const vcl &from, const ui& amount_vars_from, cons
         for(q = 0; q < possible_subst.size(); q++)
         {
             j = possible_subst[q];
-            if (correct_on_subst(from[j], to[i], subst)) // ??? возможно, следует выкинуть проверку
+            if (correct_on_subst(from[j], to[i], cur_subst)) // ??? возможно, следует выкинуть проверку
             {
                 copy_current_subform = current_subform;
                 copy_remain_lits = remain_lits;
                 copy_possible_subst = possible_subst;
-                copy_subst = subst;
+                copy_subst = cur_subst;
 
                 add_pos_subst_to_subst(copy_subst, from[j], to[i]);
 
@@ -610,26 +537,51 @@ void CalculatorFormula::search(const vcl &from, const ui& amount_vars_from, cons
 }
 
 
-vui CalculatorFormula::partial_inference_2(const vcl &from, const ui amount_vars_from,
-                                           const vcl &to, const ui amount_vars_to, vi& max_subst)
+vui Calculator_formula::partial_inference_2(const vcl &from,
+                                            const ui amount_vars_from,
+                                            const vcl &to,
+                                            const ui amount_vars_to,
+                                            Variable_substitution* subst)
 {
     vui max_subform, possible_subst, current_subform, remain_lits;
-    vi subst(amount_vars_to, -1);
+    vi current_subst;
+
+    if (subst->empty())
+    {
+        current_subst = vi(amount_vars_to, -1);
+    }
+    else
+    {
+        current_subst = vi(subst->size(), -1);
+        for(const auto& el : subst->getValue())
+        {
+            assert(el.first < (int)amount_vars_to);
+            assert(el.first >= 0);
+            assert(el.second < (int)amount_vars_from);
+            current_subst[el.first] = el.second;
+        }
+        //cerr << current_subst.size() << endl;
+        //cerr << subst->size() << endl;
+//        debug_show(current_subst);
+        subst->clear();
+    }
+
     forn(i, from.size()) possible_subst.push_back(i);
     forn(i, to.size()) remain_lits.push_back(i);
 
-    search(from, amount_vars_from, to, amount_vars_to, max_subform, current_subform, remain_lits, possible_subst, subst, max_subst);
+    search(from, amount_vars_from, to, amount_vars_to, max_subform, current_subform, remain_lits, possible_subst, current_subst, subst);
 
     return max_subform;
 }
 
 
-std::vector<const Literal*> CalculatorFormula::max_common_subformula(
-                                              const std::vector<const Literal *> &v1,
-                                              ui amount_vars_v1,
+std::vector<const Literal*> Calculator_formula::max_common_subformula(const std::vector<const Literal *> &v1,
+                                              ui                                 amount_vars_v1,
                                               const std::vector<const Literal *> &v2,
-                                              ui amount_vars_v2, ALGORITHM_VERS vers,
-                                              vi& max_subst, ui& num_of_from_formula)
+                                              ui                                 amount_vars_v2,
+                                              ALGORITHM_VERS                     vers,
+                                              Variable_substitution*             subst,
+                                              bool &swaped)
 {
     vui vv2;
     const vector<const Literal* >* pv;
@@ -639,28 +591,28 @@ std::vector<const Literal*> CalculatorFormula::max_common_subformula(
         {
             vv2 = partial_inference(v1, amount_vars_v1, v2, amount_vars_v2);
             pv = &v2;
-            num_of_from_formula = 1;
+            swaped = false;
         }
         else
         {
             vv2 = partial_inference(v2, amount_vars_v2, v1, amount_vars_v1);
             pv = &v1;
-            num_of_from_formula = 2;
+            swaped = true;
         }
     }
     else
     {
         if (v1.size() >= v2.size())
         {
-            vv2 = partial_inference_2(v1, amount_vars_v1, v2, amount_vars_v2, max_subst);
+            vv2 = partial_inference_2(v1, amount_vars_v1, v2, amount_vars_v2, subst);
             pv = &v2;
-            num_of_from_formula = 1;
+            swaped = false;
         }
         else
         {
-            vv2 = partial_inference_2(v2, amount_vars_v2, v1, amount_vars_v1, max_subst);
+            vv2 = partial_inference_2(v2, amount_vars_v2, v1, amount_vars_v1, subst);
             pv = &v1;
-            num_of_from_formula = 2;
+            swaped = true;
         }
     }
 
@@ -674,16 +626,5 @@ std::vector<const Literal*> CalculatorFormula::max_common_subformula(
 }
 
 
-CalculatorFormula::~CalculatorFormula()
-{
-}
 
 
-
-void clear_vcl(vcl v)
-{
-    forn(i, v.size())
-    {
-        check_and_clear(v[i]);
-    }
-}

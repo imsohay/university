@@ -2,6 +2,7 @@
 #include <ctime>
 #include <fstream>
 #include "calcformula.h"
+#include "mlcd.h"
 #include <bitset>
 #include <string.h>
 #include <sstream>
@@ -13,13 +14,16 @@ using namespace std;
 #define DEFAULT_FILENAME "data.txt"
 
 
-vcl generate_literals_vector(int AMOUNT_VARS, int AMOUNT_PREDS, int DIMENSION_PREDS)
+vcl generate_literals_vector(const int AMOUNT_VARS, const int AMOUNT_PREDS, const int DIMENSION_PREDS)
 {
+    int tries_count = 0;
+    bool bad_literal = false;
 	Literal* l = NULL;
     vcl v(AMOUNT_PREDS);
 	set<ui> s;
 	forn(i, AMOUNT_PREDS)
-	{
+    {
+        bad_literal = false;
 		l = new Literal(false, 1, DIMENSION_PREDS, new ui[DIMENSION_PREDS]);
 		s.clear();
 		while (s.size() < DIMENSION_PREDS) s.insert(rand() % AMOUNT_VARS);
@@ -33,11 +37,40 @@ vcl generate_literals_vector(int AMOUNT_VARS, int AMOUNT_PREDS, int DIMENSION_PR
 			v1.erase(v1.begin() + k);
 		}
 
-		v[i] = l;
+        for(size_t q = 0; q < i; q++)
+        {
+            if (v[q] == NULL)
+            {
+                cout << v[q] << endl;
+                cout << q << " " << i << endl;
+                assert(NULL);
+            }
+            if (*(v[q]) == *l)
+            {
+//                cout << "check\n";
+                delete l;
+                l = NULL;
+                tries_count++;
+                i--;
+                bad_literal = true;
+                break;
+
+                if (tries_count > 100000)
+                    assert(NULL);
+            }
+        }
+
+        if (!bad_literal)
+        {
+//            cout << i << "  " << *l << endl;
+            v[i] = l;
+        }
 	}
 
+//    cout << "===========================\n";
 	return v;
 }
+
 
 void measure_perfomance()
 {
@@ -51,8 +84,7 @@ void measure_perfomance()
         vcl vl1 = generate_literals_vector(8, 22, 3);
         vcl vl2 = generate_literals_vector(8, 22, 3);
 		//        for(auto x : vl1) x->show();
-		//        for(auto x : vl2) x->show();
-
+        //        for(auto x : vl2) x->show();
 		ALGORITHM_VERS vers = SECOND;
 		Formula_wrapper wrap_1(vl1);
 		Formula_wrapper wrap_2(vl2);
@@ -61,7 +93,7 @@ void measure_perfomance()
 
 		time = clock(), time_after = 0.0;
 
-		Formula_wrapper* res = CalculatorFormula::max_common_subformula(wrap_1, wrap_2, vers, max_subst);
+//        Formula_wrapper* res = Calculator_formula::max_common_subformula(wrap_1, wrap_2, vers, max_subst);
 
 		time_after = (clock() - time) / CLOCKS_PER_SEC;
 		if (time_after > max) max = time_after;
@@ -84,7 +116,7 @@ Literal* read_literal(string s)
 	ui* array_arguments;
 	string prefix = "literal ";
 
-	size_t i = s.find(prefix);
+    size_t i = s.find(prefix);
 	s = s.substr(i + prefix.size());
 	stringstream ss;
 	ss << s;
@@ -100,6 +132,7 @@ Literal* read_literal(string s)
 
 	return new Literal(sign, id, arity, array_arguments);
 }
+
 
 vector<vcl *>* read_from_file()
 {
@@ -141,7 +174,7 @@ vector<vcl *>* read_from_file()
 		}
 		else if (!line.empty())
 		{
-			cout << "not correct input file!\n";
+            cout << "not correct input file!\n";
             exit(EXIT_FAILURE);
 		}
 	}
@@ -152,84 +185,126 @@ vector<vcl *>* read_from_file()
 }
 
 
-void output_debug(Formula_wrapper* res)
+bool main_test_correct_subst(const Formula_wrapper& from, const Formula_wrapper& to, Variable_substitution* s)
 {
+    vcl* v_from = from.get_literals();
+    vcl* v_to = to.get_literals();
+    bool flag = false;
 
+    for(const Literal* lit : *v_to)
+    {
+        forn(i, lit->amount_vars)
+        {
+            lit->vars[i] = s->at(lit->vars[i]);
+        }
+
+        flag = false;
+        for(const Literal* lit_from : *v_from)
+        {
+            if (*lit_from == *lit)
+            {
+                flag = true;
+                break;
+            }
+        }
+
+        if (!flag)
+        {
+            return false;
+        }
+    }
+
+    clear_vcl(*v_from);
+    clear_vcl(*v_to);
+    check_and_clear(v_from);
+    check_and_clear(v_to);
+    return true;
 }
+
 
 
 int main()
 {
+    srand(time(0));
+    const int amount_vars = 5, amount_preds = 15, predicat_dimension = 3, amount_formulas = 3;
 
-    srand(time(NULL) + clock());
-//    system("pwd");
-//    vector<vcl *>* data = read_from_file();
+    forward_list<Formula_wrapper> list;
+    const int AMOUNT_TIMES = 1;
+    vcl temp;
 
-//	Formula_wrapper wrap_1(*(data->at(0)));
-//	Formula_wrapper wrap_2(*(data->at(1)));
-    int res = 0;
-    const int amount_preds = 20;
-    const int amount_vars = 7;
-    const int size_of_result = 10;
-    const int predicat_dimension = 3;
-    int results[size_of_result] = {0};
 
-    int amount_try = 1000;
-    int sum = 0;
-    int index = 0;
-    for(int i = 0; i < amount_try; i++)
-    {
-//        system("clear");
-//        cout << i << endl;
+//    forn(i, AMOUNT_TIMES)
+//    {
+//        if (i % (AMOUNT_TIMES / 100) == 0)
+//        {
+//            cout << i / (AMOUNT_TIMES / 100) << "% done\n";
+//        }
 
-        vcl vl1 = generate_literals_vector(amount_vars, amount_preds, predicat_dimension);
-        vcl vl2 = generate_literals_vector(amount_vars, amount_preds, predicat_dimension);
-        Formula_wrapper wrap_1(vl1);
-        Formula_wrapper wrap_2(vl2);
+//        forn(i, amount_formulas)
+//        {
+//            temp = generate_literals_vector(amount_vars, amount_preds, predicat_dimension);
+//            list.push_front(Formula_wrapper(temp));
+//            clear_vcl(temp);
+//        }
 
-//        ALGORITHM_VERS version = SECOND;
-//        vi max_subst;
+//        MLCD mlcd(list);
+//        cerr << mlcd << endl;
+//        mlcd.debug_info(cerr);
+//        mlcd.test();
+//        mlcd.clear();
+//        list.clear();
+//    }
 
-//        auto start = chrono::system_clock::now();
-//        Formula_wrapper* common = CalculatorFormula::max_common_subformula(wrap_1, wrap_2, version, max_subst);
-
-//        auto end= chrono::system_clock::now();
-
-//        cout << *common << endl;
-
-//        cout << "\n\n";
-        vector<vector<int>>* t1 = CalculatorFormula::analyse_variable_characteristic(wrap_1);
-//        cout << "\n\n";
-        vector<vector<int>>* t2 = CalculatorFormula::analyse_variable_characteristic(wrap_2);
-//        cout << "\n\n";
-        res = CalculatorFormula::amount_mathing(t1,t2);
-
-        sum += res;
-        if (res)
+        vector<vcl *>* data = read_from_file();
+        cerr << data->size() << endl;
+        forn(i, data->size() - 1)
         {
-            index = 10.0 * res / amount_vars;
-            if (index >= amount_vars)
-                index = amount_vars - 1;
-            results[index]++;
+            list.push_front(Formula_wrapper(*data->at(i)));
         }
+        MLCD mlcd(list);
+        cerr << mlcd << endl;
+        mlcd.test();
+        Formula_wrapper goal(*data->at(data->size() - 1));
+        cerr << "\n\ngoal formula:\n";
+        cerr << goal << endl;
+//        Variable_substitution s(&goal, &goal);
+        Formula_wrapper res = mlcd.inference(goal, NULL);
+        cerr << "result of inference:\n";
+        cerr << res << endl;
 
-        delete t1;
-        delete t2;
-//        delete common;
-        clear_vcl(vl1);
-        clear_vcl(vl2);
+//        Formula_wrapper f1(*(data->at(0)));
+//        Formula_wrapper f2(*(data->at(1)));
 
-//        auto time = chrono::duration_cast<chrono::milliseconds>(end-start);
-//        cout << "\n\nTime: " << time.count() << endl;
-    }
+//        cout << f1 << endl << f2 << endl;
+//        vector<Variable_properties> v1, v2;
+//        f1.analyse_variable_properties(v1);
+//        f2.analyse_variable_properties(v2);
+//        Variable_substitution s(&f1, &f2);
+//        Formula_wrapper* res = Calculator_formula::max_common_subformula(f1, f2, FIRST, &s);
+//        cout << *res << endl;
+
+//        for(auto el : v1)
+//        {
+//            cout << el;
+//        }
+//        cout << endl;
+//        for(auto el : v2)
+//        {
+//            cout << el;
+//        }
+//        cout << endl;
 
 
-    cout << "total try: " << amount_try << endl;
-    cout << "average: " << (double)sum / amount_try << endl;
-    forn(i, size_of_result) cout << results[i] << " ";
-    cout << endl;
+//        forn(i, data->size() )
+//        {
+//            auto fw = Formula_wrapper (*(data->at(i)));
+//    //        cout << fw << endl;
+//            list.push_front(fw);
+//        }
+
     return 0;
 }
+
 
 
 

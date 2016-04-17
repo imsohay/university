@@ -1,7 +1,81 @@
-#include "formula_wrapper.h"
+﻿#include "formula_wrapper.h"
+#include <map>
+#include "calcformula.h"
+#include <cmath>
+
+
 
 using namespace std;
 
+
+Variable_properties::Variable_properties(vector<int> dimensions)
+{
+    for (auto d : dimensions)
+    {
+        data.push_back(vector<int>(d, 0));
+    }
+}
+
+
+void Variable_properties::increment_value(int literal_num, int position_num)
+{
+    data[literal_num][position_num]++;
+}
+
+
+bool Variable_properties::operator ==(const Variable_properties &other) const
+{
+    if (data.size() != other.data.size())
+    {
+        return false;
+    }
+
+    forn(i, data.size())
+    {
+        if (data[i].size() != other.data[i].size())
+        {
+            return false;
+        }
+    }
+
+    forn(i, data.size())
+    {
+        forn(j, data[i].size())
+        {
+            if (data[i][j] != other.data[i][j])
+                return false;
+        }
+    }
+
+    return true;
+}
+
+
+ull my_pow(ull x, ull p)
+{
+  if (p == 0) return 1;
+  if (p == 1) return x;
+
+  ull tmp = my_pow(x, p / 2);
+  if (p % 2 == 0)
+      return tmp * tmp;
+  else
+      return x * tmp * tmp;
+}
+
+
+ostream &operator<<(ostream &os, Variable_properties &vp)
+{
+    for(auto v : vp.data)
+    {
+        for (int x : v)
+        {
+            os << x;
+        }
+        os << endl;
+    }
+    return os;
+}
 
 
 Formula* Formula_wrapper::build_formula(const Literal* pl)
@@ -55,38 +129,100 @@ Formula_wrapper::Formula_wrapper(std::vector<const Literal*> vl)
     }
 }
 
+
 vector<const Literal* >* Formula_wrapper::get_literals() const
 {
-    set<const Literal*>* p_s = new set<const Literal*>();
-    create_set_literal(f, p_s);
-    vector<const Literal* >* p_v = new vector<const Literal*> (p_s->begin(), p_s->end());
+//    set<const Literal*>* p_s = new set<const Literal*>();
+    vcl* p_v = new vcl();
+    create_literals_list(f, p_v);
 
-    check_and_clear(p_s);
+
+//    check_and_clear(p_s);
     return p_v;
+}
+
+std::map<int, int> Formula_wrapper::create_id_substitution() const
+{
+    map<int,int> subst;
+    std::set<int> s;
+    vcl* v = new vcl();
+    create_literals_list(f, v);
+    for(const Literal* lit : *v)
+    {
+        forn(i, lit->amount_vars)
+        {
+            s.insert(lit->vars[i]);
+        }
+    }
+
+    for(auto x : s)
+        subst.insert(std::pair<int,int>(x,x));
+
+    clear_vcl(*v);
+    check_and_clear(v);
+    return subst;
+}
+
+
+bool Formula_wrapper::operator ==(const Formula_wrapper &other) const
+{
+    return equal(other);
+}
+
+bool Formula_wrapper::operator !=(const Formula_wrapper &other) const
+{
+    return !(equal(other));
+}
+
+
+Formula_wrapper::Formula_wrapper(const Formula_wrapper &other)
+{
+    *this = other;
+}
+
+
+Formula_wrapper &Formula_wrapper::operator=(const Formula_wrapper &other)
+{
+    if (this != &other)
+    {
+        if (other.f != NULL)
+        {
+            f = new Formula;
+            *f = *(other.f);
+        }
+        else
+        {
+            f = NULL;
+        }
+    }
+    return *this;
 }
 
 ostream &operator<<(ostream &os, Formula_wrapper &fw)
 {
-    os << *fw.f;
+    if (!fw.empty())
+        os << *fw.f;
+    else
+        os << "<empty>";
     return os;
 }
 
 //    FORMULA MUST BE IN CNF
-void Formula_wrapper::create_set_literal(const Formula* p_f, set<const Literal* > *s) const
+void Formula_wrapper::create_literals_list(const Formula* p_f, vcl *v) const
 {
     assert(p_f);
 
     switch (p_f->_label)
     {
     case NOT:
-        s->insert(create_literal(p_f->l->m, true));
+        v->push_back(create_literal(p_f->l->m, true));
         break;
     case NONE:
-        s->insert(create_literal(p_f->m, false));
+        v->push_back(create_literal(p_f->m, false));
         break;
     case AND:
-        create_set_literal(p_f->l, s);
-        create_set_literal(p_f->r, s);
+        create_literals_list(p_f->l, v);
+        create_literals_list(p_f->r, v);
         break;
     default:
         assert(0);
@@ -135,6 +271,141 @@ void Formula_wrapper::get_id_vars(const Term* const term, vui& v) const
     case NOT_DEF:
         assert(0);
     }
+}
+
+
+size_t Formula_wrapper::just_calc_amount_vars(vcl * literals) const
+{
+    set<ui> set;
+    for(auto l : *literals)
+    {
+        forn(i, l->amount_vars)
+        {
+            set.insert(l->vars[i]);
+        }
+    }
+
+    return set.size();
+}
+
+
+//bool Formula_wrapper::equal(const Formula_wrapper& other) const
+//{
+//    Variable_substitution s(this, &other);
+//    auto res = Calculator_formula::max_common_subformula(*this, other, ALGORITHM_VERS::SECOND, &s);
+//    vcl * literals_1 = get_literals();
+//    vcl * literals_2 = other.get_literals();
+//    bool eq = (literals_1->size() == literals_2->size());
+
+//    clear_vcl(*literals_1);
+//    clear_vcl(*literals_2);
+//    check_and_clear(literals_1);
+//    check_and_clear(literals_2);
+//    check_and_clear(res);
+
+//    return eq;
+//}
+
+bool Formula_wrapper::equal(const Formula_wrapper& other) const
+{
+    vector<Variable_properties> vprop_1, vprop_2;
+    analyse_variable_properties(vprop_1);
+    other.analyse_variable_properties(vprop_2);
+
+    if (vprop_1.size() != vprop_2.size())
+    {
+        return false;
+    }
+
+    set<int> found;
+    bool flag = false;
+    forn(i, vprop_1.size())
+    {
+        flag = false;
+        forn(j, vprop_2.size())
+        {
+            if (vprop_1[i] == vprop_2[j] && found.find(j) == found.end())
+            {
+                found.insert(j);
+                flag = true;
+                break;
+            }
+        }
+
+        if (!flag)
+            return false;
+    }
+
+    return true;
+}
+
+
+void Formula_wrapper::calc_literals_dimensions(vcl* literals, map<int, int> &v) const
+{
+    for (auto lit : *literals)
+    {
+        if (v.find(lit->predicat_id) == v.end())
+        {
+            v.insert(std::pair<int,int>(lit->predicat_id, lit->amount_vars));
+        }
+    }
+}
+
+
+void Formula_wrapper::count_variables(vcl *literals, std::map<int, int> &mapping) const
+{
+    int count = 0;
+    for(const Literal* lit : *literals)
+    {
+        forn(i, lit->amount_vars)
+        {
+            if (mapping.find(lit->vars[i]) == mapping.end())
+            {
+                mapping.insert(std::pair<int,int>(lit->vars[i], count));
+                count++;
+            }
+        }
+    }
+}
+
+
+void Formula_wrapper::analyse_variable_properties(std::vector<Variable_properties> &v) const
+{
+    vcl *literals = get_literals();
+    map<int,int> dimensions, variables_mapping;
+    vector<int> v_dimensions;
+    int i = 0;
+    int amount_vars = just_calc_amount_vars(literals);
+    calc_literals_dimensions(literals, dimensions);
+    count_variables(literals, variables_mapping);
+    for(auto el : dimensions)
+    {
+        v_dimensions.push_back(el.second);
+    }
+    map<int,int> literals_id_to_id;
+    for(const auto& pair : dimensions)
+    {
+        literals_id_to_id.insert(std::pair<int,int>(pair.first, i));
+        i++;
+    }
+
+    forn(i, amount_vars)
+        v.push_back(Variable_properties(v_dimensions));
+
+    int variable_id = -1;
+    forn(i, literals->size())
+    {
+        const Literal* l = literals->at(i);
+        forn(j, l->amount_vars)
+        {
+            variable_id = variables_mapping[l->vars[j]];
+            assert(variable_id >= 0 && variable_id < v.size());
+            v[variable_id].increment_value(literals_id_to_id[l->predicat_id], j);
+        }
+    }
+
+    clear_vcl(*literals);
+    check_and_clear(literals);
 }
 
 
