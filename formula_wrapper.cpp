@@ -132,12 +132,10 @@ Formula_wrapper::Formula_wrapper(std::vector<const Literal*> vl)
 
 vector<const Literal* >* Formula_wrapper::get_literals() const
 {
-//    set<const Literal*>* p_s = new set<const Literal*>();
     vcl* p_v = new vcl();
-    create_literals_list(f, p_v);
+    if (!empty())
+        create_literals_list(f, p_v);
 
-
-//    check_and_clear(p_s);
     return p_v;
 }
 
@@ -289,24 +287,35 @@ size_t Formula_wrapper::just_calc_amount_vars(vcl * literals) const
 }
 
 
-//bool Formula_wrapper::equal(const Formula_wrapper& other) const
-//{
-//    Variable_substitution s(this, &other);
-//    auto res = Calculator_formula::max_common_subformula(*this, other, ALGORITHM_VERS::SECOND, &s);
-//    vcl * literals_1 = get_literals();
-//    vcl * literals_2 = other.get_literals();
-//    bool eq = (literals_1->size() == literals_2->size());
-
-//    clear_vcl(*literals_1);
-//    clear_vcl(*literals_2);
-//    check_and_clear(literals_1);
-//    check_and_clear(literals_2);
-//    check_and_clear(res);
-
-//    return eq;
-//}
-
 bool Formula_wrapper::equal(const Formula_wrapper& other) const
+{
+    vcl * literals_1 = get_literals();
+    vcl * literals_2 = other.get_literals();
+    if (literals_1->size() != literals_2->size())
+    {
+        clear_vcl(*literals_1);
+        clear_vcl(*literals_2);
+        check_and_clear(literals_1);
+        check_and_clear(literals_2);
+        return false;
+    }
+
+    Variable_substitution s(this, &other);
+    auto res = Calculator_formula::max_common_subformula(*this, other, ALGORITHM_VERS::SECOND, &s);
+    vcl * res_literals = res->get_literals();
+    bool eq = (res_literals->size() == literals_1->size());
+    clear_vcl(*literals_1);
+    clear_vcl(*literals_2);
+    clear_vcl(*res_literals);
+    check_and_clear(literals_1);
+    check_and_clear(literals_2);
+    check_and_clear(res_literals);
+    check_and_clear(res);
+
+    return eq;
+}
+
+bool Formula_wrapper::beta_equal(const Formula_wrapper& other) const
 {
     vector<Variable_properties> vprop_1, vprop_2;
     analyse_variable_properties(vprop_1);

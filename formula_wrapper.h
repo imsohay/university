@@ -51,6 +51,8 @@ public:
     bool operator !=(const Formula_wrapper& other) const;
     Formula_wrapper & operator=(const Formula_wrapper& o);
 
+    bool beta_equal(const Formula_wrapper &other) const;
+
 private:
     Formula* f;
 

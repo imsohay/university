@@ -26,6 +26,7 @@ public:
                                            ALGORITHM_VERS vers,
                                            Variable_substitution *subst);
 
+    static std::map<int,int> complete_substitution(std::map<int, int> base, std::map<int, int> extended);
 
 
 private:
@@ -65,7 +66,8 @@ private:
     static void throw_fail_substs(vi& subst, vui &possible_subst, vui &remain_lits, const vcl &from, const vcl &to);
     static void do_reverse_substitude(vcl literals, const std::map<int, int> &s);
 
-    static void transform_substitution(const Formula_wrapper &wrap_1, const Formula_wrapper &wrap_2, std::map<int, int> subst_1, std::map<int, int> subst_2, Variable_substitution *subst);
+    static void transform_substitution(bool will_swap, std::map<int, int> subst_1, std::map<int, int> subst_2, Variable_substitution *subst);
+    static void reverse_map(std::map<int, int> &s);
 };
 
 

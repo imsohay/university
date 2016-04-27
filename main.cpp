@@ -185,123 +185,159 @@ vector<vcl *>* read_from_file()
 }
 
 
-bool main_test_correct_subst(const Formula_wrapper& from, const Formula_wrapper& to, Variable_substitution* s)
-{
-    vcl* v_from = from.get_literals();
-    vcl* v_to = to.get_literals();
-    bool flag = false;
+void measure_correctness_equality_algo() {
+    srand(time(NULL));
+    const int amount_vars = 4, amount_preds = 5, predicat_dimension = 3;
+    const int AMOUNT_TIMES = 1000000;
+    vcl v1,v2;
+    int amount_fails = 0, cur_amount_vars = 0, cur_amount_preds = 0, cur_predicat_dimension = 0;
 
-    for(const Literal* lit : *v_to)
-    {
-        forn(i, lit->amount_vars)
-        {
-            lit->vars[i] = s->at(lit->vars[i]);
-        }
+    forn(i, AMOUNT_TIMES) {
+        cur_amount_vars = amount_vars + (rand() % 5);
+        cur_amount_preds = amount_preds + (rand() % 8);
+        cur_predicat_dimension = predicat_dimension + (rand() % 3);
 
-        flag = false;
-        for(const Literal* lit_from : *v_from)
-        {
-            if (*lit_from == *lit)
-            {
-                flag = true;
-                break;
-            }
-        }
+        v1 = generate_literals_vector(amount_vars, amount_preds, predicat_dimension);
+        v2 = generate_literals_vector(amount_vars, amount_preds, predicat_dimension);
+        Formula_wrapper f1(v1);
+        Formula_wrapper f2(v2);
 
-        if (!flag)
-        {
-            return false;
-        }
+//        if ((v1 == v2) ^ f1.beta_equal(f2))
+        if (!f1.beta_equal(f2) && (f1 == f2))
+            amount_fails++;
+
+        clear_vcl(v1);
+        clear_vcl(v2);
     }
 
-    clear_vcl(*v_from);
-    clear_vcl(*v_to);
-    check_and_clear(v_from);
-    check_and_clear(v_to);
-    return true;
+    cout << (double)amount_fails / AMOUNT_TIMES * 100 << "% fails\n";
 }
 
 
 
 int main()
 {
-    srand(time(0));
-    const int amount_vars = 5, amount_preds = 15, predicat_dimension = 3, amount_formulas = 3;
+    auto start = std::chrono::system_clock::now();
+
+    measure_correctness_equality_algo();
+
+    auto end = std::chrono::system_clock::now();
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "time:  " << elapsed.count() << " ms\n\n";
+
+    return 0;
+
+
+//    srand(time(0));
+//    const int amount_vars = 5, amount_preds = 7, predicat_dimension = 3, amount_formulas = 6;
 
     forward_list<Formula_wrapper> list;
-    const int AMOUNT_TIMES = 1;
-    vcl temp;
+//    const int AMOUNT_TIMES = 1000;
+//    vcl temp;
 
 
-//    forn(i, AMOUNT_TIMES)
-//    {
-//        if (i % (AMOUNT_TIMES / 100) == 0)
-//        {
-//            cout << i / (AMOUNT_TIMES / 100) << "% done\n";
-//        }
+    //    forn(i, AMOUNT_TIMES)
+    //    {
+    //        if (i % (AMOUNT_TIMES / 100) == 0)
+    //        {
+    //            cout << i / (AMOUNT_TIMES / 100) << "% done\n";
+    //        }
 
-//        forn(i, amount_formulas)
-//        {
-//            temp = generate_literals_vector(amount_vars, amount_preds, predicat_dimension);
-//            list.push_front(Formula_wrapper(temp));
-//            clear_vcl(temp);
-//        }
+    //        forn(j, amount_formulas)
+    //        {
+    //            bool fail = false;
+    //            temp = generate_literals_vector(amount_vars, amount_preds, predicat_dimension);
+    //            forn(k, temp.size())
+    //            {
+    //                forn(q, temp.size())
+    //                {
+    //                    if (k != q && *temp[k] == *temp[q])
+    //                    {
+    //                        fail = true;
+    //                        break;
+    //                    }
+    //                }
 
-//        MLCD mlcd(list);
-//        cerr << mlcd << endl;
-//        mlcd.debug_info(cerr);
-//        mlcd.test();
-//        mlcd.clear();
-//        list.clear();
-//    }
-
-        vector<vcl *>* data = read_from_file();
-        cerr << data->size() << endl;
-        forn(i, data->size() - 1)
-        {
-            list.push_front(Formula_wrapper(*data->at(i)));
-        }
-        MLCD mlcd(list);
-        cerr << mlcd << endl;
-        mlcd.test();
-        Formula_wrapper goal(*data->at(data->size() - 1));
-        cerr << "\n\ngoal formula:\n";
-        cerr << goal << endl;
-//        Variable_substitution s(&goal, &goal);
-        Formula_wrapper res = mlcd.inference(goal, NULL);
-        cerr << "result of inference:\n";
-        cerr << res << endl;
-
-//        Formula_wrapper f1(*(data->at(0)));
-//        Formula_wrapper f2(*(data->at(1)));
-
-//        cout << f1 << endl << f2 << endl;
-//        vector<Variable_properties> v1, v2;
-//        f1.analyse_variable_properties(v1);
-//        f2.analyse_variable_properties(v2);
-//        Variable_substitution s(&f1, &f2);
-//        Formula_wrapper* res = Calculator_formula::max_common_subformula(f1, f2, FIRST, &s);
-//        cout << *res << endl;
-
-//        for(auto el : v1)
-//        {
-//            cout << el;
-//        }
-//        cout << endl;
-//        for(auto el : v2)
-//        {
-//            cout << el;
-//        }
-//        cout << endl;
+    //                if (fail)
+    //                    break;
+    //            }
+    //            if (fail)
+    //            {
+    //                assert(NULL);
+    //                j--;
+    //            }
+    //            else
+    //            {
+    //                list.push_front(Formula_wrapper(temp));
+    //            }
 
 
-//        forn(i, data->size() )
-//        {
-//            auto fw = Formula_wrapper (*(data->at(i)));
-//    //        cout << fw << endl;
-//            list.push_front(fw);
-//        }
+    //            clear_vcl(temp);
+    //        }
 
+    //        MLCD mlcd(list);
+    ////        cerr << mlcd << endl;
+    ////        mlcd.debug_info(cerr);
+    //        mlcd.test();
+    //        mlcd.test_inference();
+    //        mlcd.clear();
+    //        list.clear();
+    //    }
+
+
+    vector<vcl *>* data = read_from_file();
+    ofstream out("result.txt");
+
+//    cerr << data->size() << endl;
+    vector<Formula_wrapper> v;
+
+    forn(i, data->size())
+    {
+        list.push_front(Formula_wrapper(*data->at(i)));
+//        v.push_back(Formula_wrapper(*data->at(i)));
+    }
+
+    for(auto el : list)
+        cout << el << "\n\n";
+
+//    Variable_substitution subst(&v[0], &v[1]);
+
+//    auto start = std::chrono::system_clock::now();
+
+//    auto res = Calculator_formula::max_common_subformula(v[0], v[1], SECOND, &subst);
+
+//    auto end = std::chrono::system_clock::now();
+//    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+//    std::cout << "time:  " << elapsed.count() << " ms\n\n";
+
+//    cout << *res << endl;
+
+
+    MLCD mlcd(list);
+    mlcd.test();
+
+    out << mlcd << endl;
+    out.close();
+
+//    mlcd.test_inference();
+
+
+//    Formula_wrapper goal(*data->at(3));
+//    cerr << "goal formula:\n";
+//    cerr << goal << endl;
+//    mlcd.rebuild(goal);
+//    mlcd.test();
+//    mlcd.test_inference();
+//    cerr << "\n====================================================\nafter rebuild:\n";
+//    cerr << mlcd << endl;
+
+    for(vcl* el : *data)
+    {
+        clear_vcl(*el);
+        check_and_clear(el);
+    }
+    check_and_clear(data);
     return 0;
 }
 

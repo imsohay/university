@@ -54,14 +54,15 @@ public:
     Formula_wrapper inference(Formula_wrapper& fw, Variable_substitution *result_subst);
     void debug_info(std::ostream &out);
     void test();
+    void test_inference();
     inline void clear() { data.clear(); }
+    void rebuild(Formula_wrapper& fw);
 
 private:
 
     std::vector<level> data;
     int remove_duplicates(level &l);
     void remove_empties(level& l);
-    void rebuild(Formula_wrapper& fw);
     Element *inference_search(Element* current, Formula_wrapper& goal, Variable_substitution *partial_subst);
     bool is_true(Element* current, Formula_wrapper& goal, Variable_substitution* partial_subst);
     void make_new_element(Element &el1, Element &el2, Element& result);

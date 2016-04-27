@@ -26,9 +26,10 @@ public:
     void swap_formulas();
     void set_identical_substitution(std::size_t size);
     void flush();
-    void initialize_value(std::map<int,int> s);
+    void initialize_value(const std::map<int, int> s);
     Variable_substitution* compose(Variable_substitution *other) const;
     void apply_to(Formula_wrapper& fw) const;
+    void reverse_value();
 
     friend std::ostream& operator<<(std::ostream& os, Variable_substitution& subst);
     Variable_substitution & operator=(const Variable_substitution& other);

@@ -1,5 +1,5 @@
 #include "mlcd.h"
-#include <queue>
+#include <algorithm>
 
 using namespace std;
 
@@ -141,20 +141,10 @@ void MLCD::make_new_element(Element& el1, Element& el2, Element &result)
     Formula_wrapper* ptr_fw = Calculator_formula::max_common_subformula(
                        el1.data, el2.data, SECOND, max_subst);
 
-    bool swaped = (&(el1.data) == max_subst->getTo());
     Variable_substitution* id_subst = new Variable_substitution(&(el1.data), &(el2.data));
-    map<int,int> id_map;
-    if (swaped)
-    {
-        id_subst->swap_formulas();
-        id_subst->initialize_value(el1.data.create_id_substitution());
-        result = Element(*ptr_fw, &el1, &el2, id_subst, max_subst);
-    }
-    else
-    {
-        id_subst->initialize_value(el2.data.create_id_substitution());
-        result = Element(*ptr_fw, &el1, &el2, max_subst, id_subst);
-    }
+
+    id_subst->initialize_value(el2.data.create_id_substitution());
+    result = Element(*ptr_fw, &el1, &el2, max_subst, id_subst);
 
     if (!test_correct_subst(result.parents[0]->data, result.data, result.substitutions[0]) ||
         !test_correct_subst(result.parents[1]->data, result.data, result.substitutions[1]))
@@ -178,7 +168,8 @@ Formula_wrapper MLCD::inference(Formula_wrapper &fw, Variable_substitution* resu
             return p_res->data;
         }
         p_res = NULL;
-        result_subst->clear();
+        if (result_subst)
+            result_subst->clear();
     }
 
 //    rebuild(fw);
@@ -186,25 +177,40 @@ Formula_wrapper MLCD::inference(Formula_wrapper &fw, Variable_substitution* resu
 }
 
 
+
+//bool check_swapness(const Formula_wrapper& f1, const Formula_wrapper& f2)
+//{
+//    auto v1 = f1.get_literals();
+//    auto v2 = f2.get_literals();
+//    bool res = (v1->size() < v2->size());
+//    clear_vcl(*v1);
+//    clear_vcl(*v2);
+//    check_and_clear(v1);
+//    check_and_clear(v2);
+//    return res;
+//}
+
+
 Element* MLCD::inference_search(Element* current, Formula_wrapper& goal, Variable_substitution* partial_subst)
 {
     Element* result = NULL;
-
-    if (is_true(current, goal, partial_subst))
+    Variable_substitution copy_subst(&current->data, &goal);
+    copy_subst.initialize_value(partial_subst->getValue());
+    if (is_true(current, goal, &copy_subst))
     {
-        cerr << "before: " << goal << endl;
-        partial_subst->apply_to(goal);
-        cerr << "after: " << goal << endl;
+        copy_subst.apply_to(goal);
 
         if (current->parents.empty())
             return current;
 
         forn(i, current->parents.size())
         {
-
-            result = inference_search(current->parents[i], goal, current->substitutions[i]);
+            Variable_substitution copy(*current->substitutions[i]);
+            result = inference_search(current->parents[i], goal, &copy);
             if (result)
+            {
                 return result;
+            }
         }
         return NULL;
     }
@@ -217,16 +223,10 @@ Element* MLCD::inference_search(Element* current, Formula_wrapper& goal, Variabl
 
 bool MLCD::is_true(Element *current, Formula_wrapper &goal, Variable_substitution*partial_subst)
 {
-    cerr << "in is_true:\n";
-    cerr << current->data << endl;
-    cerr << goal << endl;
-    Formula_wrapper fw1 = *(partial_subst->getFrom());
-    Formula_wrapper fw2 = *(partial_subst->getTo());
-    cerr << fw1 << endl << fw2 << "\n\n\n";
-
-
     auto res = Calculator_formula::max_common_subformula(current->data, goal, SECOND, partial_subst);
-    return (*res == current->data);
+    bool eq = (*res == current->data);
+    check_and_clear(res);
+    return eq;
 }
 
 
@@ -262,6 +262,89 @@ void MLCD::test()
         test(el);
     }
 
+}
+
+
+vi extract_values_from_map(map<int,int>& s)
+{
+    set<int> _set;
+    for(auto el : s) _set.insert(el.second);
+    return vi(_set.begin(), _set.end());
+}
+
+
+void set_values_to_map(map<int,int>& s, vi& v)
+{
+    int i = 0;
+    for(auto& el : s)
+    {
+        s[el.first] = v[i];
+        i++;
+    }
+}
+
+
+void MLCD::test_inference()
+{
+    int i = 0;
+    for(auto& el : data.at(0))
+    {
+        Formula_wrapper f = el.data;
+        Variable_substitution var_subst(&f, &f);
+        map<int,int> subst = f.create_id_substitution();
+        vi current_v = extract_values_from_map(subst);
+        std::sort(current_v.begin(), current_v.end());
+
+        i = 0;
+        do
+        {
+//            if (i % 20 != 0)
+//            {
+//                i++;
+//                continue;
+//            }
+
+            Formula_wrapper copy = f;
+            set_values_to_map(subst, current_v);
+            var_subst.initialize_value(subst);
+            var_subst.apply_to(copy);
+//            cerr << copy << endl;
+            Formula_wrapper res = inference(copy, NULL);
+            if (res.empty())
+            {
+                bool flag = false;
+                int i = 0, j = 0;
+                for(auto& el1 : data.at(0))
+                {
+                    for(auto& el2 : data.at(0))
+                    {
+                        if (i != j && el1.data == el2.data)
+                        {
+                            flag = true;
+                            break;
+                        }
+                        j++;
+                    }
+                    i++;
+
+                    if (flag)
+                        break;
+                }
+
+                if (!flag)
+                {
+                    cerr << *this << endl;
+                    cerr << copy << endl;
+                    __throw_runtime_error("not correct inference");
+                }
+            }
+
+            res.~Formula_wrapper();
+            copy.~Formula_wrapper();
+            i++;
+        } while (std::next_permutation(current_v.begin(), current_v.end()));
+        f.~Formula_wrapper();
+    }
 }
 
 
@@ -436,9 +519,69 @@ void MLCD::remove_empties(level& l)
 }
 
 
+int size_of_list(forward_list<Element> l)
+{
+    int i = 0;
+    for(auto& _ : l) i++;
+    return i;
+}
+
 void MLCD::rebuild(Formula_wrapper &fw)
 {
-    __throw_logic_error("hasn't implemented function");
+    int index_level = 0;
+    level* current_level = &data.at(index_level);
+    forward_list<Element> list, list_for_next_level;
+    list.push_front(Element(fw));
+
+    while (true)
+    {
+        cerr << index_level << " " << size_of_list(list) << "\n";
+        cerr << "check\n";
+
+        for(auto& old_el : *current_level)
+        {
+            for(auto& new_el : list)
+            {
+                Element el_for_next;
+                make_new_element(old_el, new_el, el_for_next);
+                list_for_next_level.push_front(el_for_next);
+            }
+        }
+
+        for(auto& el : list) current_level->push_front(el);
+        list.clear();
+
+        remove_empties(list_for_next_level);
+        remove_duplicates(list_for_next_level);
+        if (list_for_next_level.empty())
+            break;
+
+        index_level++;
+        if (index_level < data.size())
+        {
+            current_level = &data.at(index_level);
+            list_for_next_level.remove_if([current_level](Element& x)
+                {
+                    for(auto& el : *current_level)
+                        if (el.data == x.data)
+                            return true;
+
+                    return false;
+                });
+
+            if (list_for_next_level.empty())
+                break;
+        }
+        else
+        {
+            data.push_back(forward_list<Element>());
+            current_level = &data.at(index_level);
+        }
+
+        list = list_for_next_level;
+        list_for_next_level.clear();
+    }
+
 }
 
 

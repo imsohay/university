@@ -1,5 +1,6 @@
 #include "variable_substitution.h"
 #include <string.h>
+#include "calcformula.h"
 
 using namespace std;
 
@@ -35,7 +36,7 @@ void Variable_substitution::flush()
     value = copy;
 }
 
-void Variable_substitution::initialize_value(std::map<int, int> s)
+void Variable_substitution::initialize_value(const std::map<int, int> s)
 {
     value.clear();
     value = s;
@@ -69,32 +70,33 @@ void Variable_substitution::apply_to(Formula_wrapper &fw) const
 {
     map<int,int> id = fw.create_id_substitution();
     map<int,int> new_subst = value;
-    set<int> _set;
-    for(auto el : new_subst)
-    {
-        _set.insert(el.second);
-    }
-    int i = 0;
-    for(auto el : id)
-    {
-        try
-        {
-            new_subst.at(el.first);
-        }
-        catch(std::out_of_range e)
-        {
-            while(true)
-            {
-                if (_set.find(i) == _set.end())
-                    break;
+    new_subst = Calculator_formula::complete_substitution(new_subst, id);
+//    set<int> _set;
+//    for(auto el : new_subst)
+//    {
+//        _set.insert(el.second);
+//    }
+//    int i = 0;
+//    for(auto el : id)
+//    {
+//        try
+//        {
+//            new_subst.at(el.first);
+//        }
+//        catch(std::out_of_range e)
+//        {
+//            while(true)
+//            {
+//                if (_set.find(i) == _set.end())
+//                    break;
 
-                i++;
-            }
-            new_subst[el.first] = i;
-            _set.insert(i);
-            i++;
-        }
-    }
+//                i++;
+//            }
+//            new_subst[el.first] = i;
+//            _set.insert(i);
+//            i++;
+//        }
+//    }
 
     vcl* literals = fw.get_literals();
     for(const Literal * lit : *literals)
@@ -102,12 +104,22 @@ void Variable_substitution::apply_to(Formula_wrapper &fw) const
 
         forn(j, lit->amount_vars)
         {
-            lit->vars[j] = new_subst[lit->vars[j]];
+            lit->vars[j] = new_subst.at(lit->vars[j]);
         }
     }
+    fw.~Formula_wrapper();
     fw = *literals;
     clear_vcl(*literals);
     check_and_clear(literals);
+}
+
+void Variable_substitution::reverse_value()
+{
+    map<int,int> temp;
+    for(auto el : value)
+        temp[el.second] = el.first;
+    value.clear();
+    value = temp;
 }
 
 
