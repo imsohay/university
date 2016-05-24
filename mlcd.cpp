@@ -178,17 +178,6 @@ Formula_wrapper MLCD::inference(Formula_wrapper &fw, Variable_substitution* resu
 
 
 
-//bool check_swapness(const Formula_wrapper& f1, const Formula_wrapper& f2)
-//{
-//    auto v1 = f1.get_literals();
-//    auto v2 = f2.get_literals();
-//    bool res = (v1->size() < v2->size());
-//    clear_vcl(*v1);
-//    clear_vcl(*v2);
-//    check_and_clear(v1);
-//    check_and_clear(v2);
-//    return res;
-//}
 
 
 Element* MLCD::inference_search(Element* current, Formula_wrapper& goal, Variable_substitution* partial_subst)
@@ -298,17 +287,16 @@ void MLCD::test_inference()
         i = 0;
         do
         {
-//            if (i % 20 != 0)
-//            {
-//                i++;
-//                continue;
-//            }
+            if (i % 3000 != 0)
+            {
+                i++;
+                continue;
+            }
 
             Formula_wrapper copy = f;
             set_values_to_map(subst, current_v);
             var_subst.initialize_value(subst);
             var_subst.apply_to(copy);
-//            cerr << copy << endl;
             Formula_wrapper res = inference(copy, NULL);
             if (res.empty())
             {
@@ -355,7 +343,6 @@ void MLCD::test(Element& el)
     {
         if (!test_correct_subst(el.parents[i]->data, el.data, el.substitutions[i]))
         {
-            cerr << "FUUUCK UP!!!\n";
             cerr << "from: " << el.parents[i]->data << endl
                  << "to: " << el.data << endl
                  << *el.substitutions[i] << "\n\n";
@@ -481,17 +468,6 @@ int MLCD::remove_duplicates(level& l)
                     {
                         Variable_substitution* temp = (x.substitutions[index])->compose(subst);
                         template_el.add_parent(parent, temp);
-
-//                        cerr << "\n############################\n";
-//                        cerr << *p_f << "\n\n";
-//                        cerr << "subst for: " << template_el.data << endl;
-//                        cerr << "subst into:" << x.data << endl;
-//                        cerr << "subst:\n" << *subst << endl;
-//                        cerr << "\nsubst for: " << x.data << endl;
-//                        cerr << "subst into: " << x.parents[index]->data << endl;
-//                        cerr << "subst:\n" << *x.substitutions[index] << endl;
-//                        cerr << "\nresult of composing:\n" << *temp << endl;
-//                        cerr << "\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n";
                     }
 
                     index++;

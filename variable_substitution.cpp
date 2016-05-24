@@ -45,14 +45,6 @@ void Variable_substitution::initialize_value(const std::map<int, int> s)
 Variable_substitution *Variable_substitution::compose(Variable_substitution *other) const
 {
     Variable_substitution copy = *this;
-//    cerr << "\n\nbefore(this,other):\n";
-//    cerr << copy << std::endl;
-//    cerr << (*other) << std::endl;
-    //assert(this->size() == other->size());
-//    cerr << *from << endl;
-//    cerr << *to << endl;
-//    cerr << *other->from << endl;
-//    cerr << *other->to << endl;
 
     Variable_substitution* result = new Variable_substitution(this->from, other->to);
     for(auto el : other->value)
@@ -60,8 +52,6 @@ Variable_substitution *Variable_substitution::compose(Variable_substitution *oth
         result->insert(el.first, (el.second == -1 ? -1 : this->at(el.second)));
     }
 
-//    cerr << "result:\n";
-//    cerr << (*result) << endl;
     return result;
 }
 
@@ -71,32 +61,7 @@ void Variable_substitution::apply_to(Formula_wrapper &fw) const
     map<int,int> id = fw.create_id_substitution();
     map<int,int> new_subst = value;
     new_subst = Calculator_formula::complete_substitution(new_subst, id);
-//    set<int> _set;
-//    for(auto el : new_subst)
-//    {
-//        _set.insert(el.second);
-//    }
-//    int i = 0;
-//    for(auto el : id)
-//    {
-//        try
-//        {
-//            new_subst.at(el.first);
-//        }
-//        catch(std::out_of_range e)
-//        {
-//            while(true)
-//            {
-//                if (_set.find(i) == _set.end())
-//                    break;
 
-//                i++;
-//            }
-//            new_subst[el.first] = i;
-//            _set.insert(i);
-//            i++;
-//        }
-//    }
 
     vcl* literals = fw.get_literals();
     for(const Literal * lit : *literals)
@@ -152,7 +117,6 @@ std::ostream &operator<<(std::ostream &os, Variable_substitution &subst)
     }
     s += "\n";
     os << s;
-//    os << "from: " << *subst.from << std::endl << "to: " << *subst.to << std::endl;
     return os;
 }
 

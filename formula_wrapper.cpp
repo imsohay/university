@@ -289,6 +289,11 @@ size_t Formula_wrapper::just_calc_amount_vars(vcl * literals) const
 
 bool Formula_wrapper::equal(const Formula_wrapper& other) const
 {
+    if (!beta_equal(other))
+    {
+        return false;
+    }
+
     vcl * literals_1 = get_literals();
     vcl * literals_2 = other.get_literals();
     if (literals_1->size() != literals_2->size())

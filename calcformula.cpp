@@ -188,13 +188,6 @@ void Calculator_formula::transform_substitution(bool will_swap,
                                                 std::map<int,int> subst_2,
                                                 Variable_substitution* subst)
 {
-//    if (will_swap)
-//    {
-//        cerr << "CHEEEEEEEEEECK!!\n";
-//        subst->reverse_value();
-//        std::swap(subst_1, subst_2);
-//    }
-
     map<int,int> transformed_subst;
     for(const auto& el : subst->getValue())
     {
@@ -209,13 +202,6 @@ void Calculator_formula::transform_substitution(bool will_swap,
         }
     }
 
-//    cout << "first subst:\n";
-//    debug_show(subst_1);
-//    cout << "second subst:\n";
-//    debug_show(subst_2);
-
-//    cout << "transformed:\n";
-//    debug_show(transformed_subst);
     subst->clear();
     for(auto el : transformed_subst)
         subst->insert(el.first, el.second);
@@ -242,72 +228,20 @@ Formula_wrapper* Calculator_formula::max_common_subformula(const Formula_wrapper
     ui amount_vars_1 = calc_amount_vars(v1, subst_1);
     ui amount_vars_2 = calc_amount_vars(v2, subst_2);
 
-//        cerr << "v1:\n";
-//        debug_show(v1);
-//        cerr << "v2:\n";
-//        debug_show(v2);
 
     transform_substitution(v1.size() < v2.size(), subst_1, subst_2, subst);
-//    cerr << "in max common subform before:\n";
-//    cerr << *subst << endl;
-
-
     vector<const Literal*> common_literals = max_common_subformula(v1, amount_vars_1, v2,
                                                                    amount_vars_2, vers, subst, swaped);
-//    cerr << "in max common subform after:\n";
-//    cerr << *subst << endl;
-
 
     if (vers == ALGORITHM_VERS::SECOND)
     {
-//        if (swaped)
-//        {
-//            std::swap(subst_1, subst_2);
-//            subst->swap_formulas();
-//        }
-
         subst->flush();
-//        auto& max_subst = (subst_1.size() > subst_2.size() ? subst_1 : subst_2);
-//        if (subst_1.size() > subst_2.size())
-//        {
-//            auto completed_subst = complete_substitution(subst->getValue(), subst_1);
-//            subst->initialize_value(completed_subst);
-//            subst_2 = complete_substitution(subst_2, subst_1);
-
-//        }
-//        else
-//        {
-//            cerr << "s1:\n";
-//            debug_show(subst_1);
-//            cerr << "s2:\n";
-//            debug_show(subst_2);
-//            cerr << "s:\n";
-//            cerr << *subst << endl;
-//            auto completed_subst = complete_substitution(subst->getValue(), subst_2);
-//            subst->initialize_value(completed_subst);
-//            subst_1 = complete_substitution(subst_1, subst_2);
-//            cerr << "completed_subst:\n";
-//            debug_show(completed_subst);
-//            cerr << endl << *subst << endl;
-
-//        }
 
         reverse_map(subst_1);
         map<int,int> new_s;
         int temp_val = -1;
         // TO_DO: move on 'subst'!!!
-//        for(auto el : subst_2)
-//        {
-//            temp_val = subst->at(el.second);
-//            if (temp_val == -1)
-//            {
-//                new_s[el.first] = temp_val;
-//            }
-//            else
-//            {
-//                new_s[el.first] = subst_1.at(temp_val);
-//            }
-//        }
+
         for(const auto& el : subst->getValue())
         {
             new_s[reverse_find(subst_2, el.first)] = subst_1.at(el.second);
@@ -566,22 +500,11 @@ void Calculator_formula::search(const vcl &from,
                                 vi& cur_subst,
                                 Variable_substitution* max_subst)
 {
-//    debug_show(remain_lits);
     throw_fail_lits(cur_subst, from, to, remain_lits, possible_subst);
-//    debug_show(current_subform);
-//    debug_show(possible_subst);
-//    debug_show(remain_lits);
-//    cerr << "--------------------\n";
+
     add_success_lits(cur_subst, from, to, remain_lits, current_subform, possible_subst);
-//    debug_show(current_subform);
-//    debug_show(possible_subst);
-//    debug_show(remain_lits);
-//    cerr << "--------------------\n";
+
     throw_fail_substs(cur_subst, possible_subst, remain_lits, from, to);
-//    debug_show(current_subform);
-//    debug_show(possible_subst);
-//    debug_show(remain_lits);
-//    cerr << "--------------------\n";
     if (current_subform.size() > max_subform.size())
     {
         max_subform.clear();
@@ -606,7 +529,7 @@ void Calculator_formula::search(const vcl &from,
         for(q = 0; q < possible_subst.size(); q++)
         {
             j = possible_subst[q];
-            if (correct_on_subst(from[j], to[i], cur_subst)) // ??? возможно, следует выкинуть проверку
+            if (correct_on_subst(from[j], to[i], cur_subst))
             {
                 copy_current_subform = current_subform;
                 copy_remain_lits = remain_lits;
@@ -651,8 +574,6 @@ vui Calculator_formula::partial_inference_2(const vcl &from,
     }
     else
     {
-        //cerr << *subst << endl;
-
         set<int> _set;
         map<int,int> temp;
         for(const auto& el : subst->getValue())
@@ -668,10 +589,6 @@ vui Calculator_formula::partial_inference_2(const vcl &from,
         for(auto el : temp)
             subst->insert(el.first, el.second);
 
-//        debug_show(from);
-//        cerr << "====================\n";
-//        debug_show(to);
-//        cerr << *subst << endl << endl;
         current_subst = vi(subst->size(), -1);
         for(const auto& el : subst->getValue())
         {
@@ -680,13 +597,6 @@ vui Calculator_formula::partial_inference_2(const vcl &from,
             assert(el.second < (int)amount_vars_from);
             current_subst[el.first] = el.second;
         }
-//        cerr << "in partial inference_2 current subst:\n";
-//        debug_show(current_subst);
-//        cerr << "\n";
-//        cerr << "from:\n";
-//        debug_show(from);
-//        cerr << "to:\n";
-//        debug_show(to);
         subst->clear();
     }
 
@@ -726,19 +636,11 @@ std::vector<const Literal*> Calculator_formula::max_common_subformula(const std:
     }
     else
     {
-//        if (v1.size() >= v2.size())
-//        {
-            vv2 = partial_inference_2(v1, amount_vars_v1, v2, amount_vars_v2, subst);
-            pv = &v2;
-            swaped = false;
-//        }
-//        else
-//        {
-//            subst->reverse_value();
-//            vv2 = partial_inference_2(v2, amount_vars_v2, v1, amount_vars_v1, subst);
-//            pv = &v1;
-//            swaped = true;
-//        }
+
+        vv2 = partial_inference_2(v1, amount_vars_v1, v2, amount_vars_v2, subst);
+        pv = &v2;
+        swaped = false;
+
     }
 
     vector<const Literal*> res(vv2.size());
