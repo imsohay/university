@@ -38,6 +38,7 @@ public:
     Formula_wrapper(const Formula_wrapper& other);
     ~Formula_wrapper() { check_and_clear(f); }
     std::vector<const Literal *> *get_literals() const;
+    std::vector<std::pair<int,int>> get_incidences_list() const;
     std::map<int,int> create_id_substitution() const;
     void analyse_variable_properties(std::vector<Variable_properties> &) const;
 
@@ -52,6 +53,7 @@ public:
     Formula_wrapper & operator=(const Formula_wrapper& o);
 
     bool beta_equal(const Formula_wrapper &other) const;
+    bool equal_by_incidences_list(const Formula_wrapper & other) const;
 
 private:
     Formula* f;

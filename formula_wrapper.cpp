@@ -2,7 +2,7 @@
 #include <map>
 #include "calcformula.h"
 #include <cmath>
-
+#include <algorithm>
 
 
 using namespace std;
@@ -137,6 +137,52 @@ vector<const Literal* >* Formula_wrapper::get_literals() const
         create_literals_list(f, p_v);
 
     return p_v;
+}
+
+vector<std::pair<int, int> > Formula_wrapper::get_incidences_list() const
+{
+    vcl* v_literals = get_literals();
+    vector<pair<int,int>> incidences = vector<pair<int,int>>();
+    int x, left_id, right_id;
+
+    map<int,int> subst = create_id_substitution();
+    vector<int> vars(subst.size());
+    for(auto s : subst)
+    {
+        vars.push_back(s.first);
+    }
+
+    vector<vector<pair<int,int>>> res;
+    for(int var_id : vars)
+    {
+        map<int,int> incidences;
+        for(int v_id : vars)
+        {
+            incidences.insert(v_id, 0);
+        }
+
+        for(const Literal* lit : *v_literals)
+        {
+            size_t n = lit->amount_vars;
+//            incidences.push_back(make_pair(lit->vars[n-1], lit->vars[0]));
+            for(int i = 0; i < n - 1; i++)
+            {
+                x = lit->vars[i];
+                if (x == var_id)
+                {
+                    left_id = lit->vars[(i == 0) ? n - 1 : i - 1];
+                    right_id = lit->vars[(i == n - 1) ? 0 : i + 1];
+                    (incidences[left_id]).second += 1;
+                    (incidences[right_id]).first -= 1;
+                }
+                incidences.push_back(make_pair(lit->vars[i], lit->vars[i+1]));
+            }
+        }
+
+        res.push_back(incidences);
+    }
+
+    return incidences;
 }
 
 std::map<int, int> Formula_wrapper::create_id_substitution() const
@@ -351,6 +397,26 @@ bool Formula_wrapper::beta_equal(const Formula_wrapper& other) const
     }
 
     return true;
+}
+
+bool Formula_wrapper::equal_by_incidences_list(const Formula_wrapper &other) const
+{
+    vector<pair<int,int>> this_incs = get_incidences_list();
+    vector<pair<int,int>> other_incs = other.get_incidences_list();
+    set<pair<int,int>> this_set_incs(this_incs.begin(), this_incs.end());
+    set<pair<int,int>> other_set_incs(other_incs.begin(), other_incs.end());
+    vector<pair<int,int>> res(std::max(this_set_incs.size(), other_set_incs.size()));
+
+    auto it = std::set_symmetric_difference(this_set_incs.begin(), this_set_incs.end(),
+                                            other_set_incs.begin(), other_set_incs.end(), res.begin());
+
+    res.resize(it - res.begin());
+    for(it = res.begin(); it != res.end(); it++)
+    {
+        cout << it->first << " " << it->second << endl;
+    }
+
+    return res.empty();
 }
 
 

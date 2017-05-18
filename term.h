@@ -6,6 +6,7 @@
 #include <iostream>
 #include <assert.h>
 #include <vector>
+#include <utility>
 
 #define forn(i,n) for(size_t i = 0; i < n; i++)
 #define check_and_clear(ptr) { if (ptr != NULL) { delete ptr; ptr = NULL; } }
